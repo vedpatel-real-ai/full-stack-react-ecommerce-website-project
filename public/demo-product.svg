@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800" role="img" aria-labelledby="title desc">
+  <title id="title">NovaCommerce demo product placeholder</title>
+  <desc id="desc">Abstract retail product package placeholder.</desc>
+  <rect width="800" height="800" fill="#f7faf7"/>
+  <rect x="170" y="130" width="460" height="540" rx="28" fill="#ffffff" stroke="#d9e5d8" stroke-width="8"/>
+  <rect x="230" y="210" width="340" height="250" rx="20" fill="#e8f3e8"/>
+  <circle cx="400" cy="335" r="84" fill="#6b8f5f"/>
+  <path d="M356 338c48-78 118-78 142-14-48-12-86 8-142 14z" fill="#ffffff" opacity=".82"/>
+  <rect x="250" y="520" width="300" height="22" rx="11" fill="#2d3f2d"/>
+  <rect x="300" y="570" width="200" height="18" rx="9" fill="#9ab49a"/>
+</svg>
