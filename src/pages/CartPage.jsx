@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAppContext } from '../AppContext';
 import { useToast } from '../components/ToastContext';
@@ -21,8 +21,8 @@ function CartPage() {
   useEffect(() => {
     const checkAuthState = async () => {
       try {
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        setUserLoading(false);
+      await supabase.auth.getSession();
+      setUserLoading(false);
       } catch (error) {
         console.error('Auth state check error:', error);
         setUserLoading(false);
@@ -36,7 +36,68 @@ function CartPage() {
     }
   }, [user]);
 
-  useEffect(() => {
+const mergeGuestCartWithUserCart = useCallback(async (guestCart, userCart) => {
+    try {
+      const mergedItems = [...userCart];
+
+      for (const guestItem of guestCart) {
+        const existingItemIndex = userCart.findIndex(
+          item => item.productId === guestItem.productId
+        );
+
+        if (existingItemIndex >= 0) {
+          const newQuantity =
+            userCart[existingItemIndex].quantity + guestItem.quantity;
+
+          await supabase
+            .from('cart_items')
+            .update({ quantity: newQuantity })
+            .eq('user_id', user.id)
+            .eq('product_id', guestItem.productId);
+
+          mergedItems[existingItemIndex].quantity = newQuantity;
+        } else {
+          const { data, error } = await supabase
+            .from('cart_items')
+            .insert({
+              user_id: user.id,
+              product_id: guestItem.productId,
+              quantity: guestItem.quantity
+            })
+            .select(`
+              id,
+              product_id,
+              quantity,
+              products (
+                product_name,
+                product_price,
+                product_image
+              )
+            `);
+
+          if (!error && data?.[0]) {
+            mergedItems.push({
+              id: data[0].id,
+              productId: data[0].product_id,
+              name: data[0].products.product_name,
+              price: data[0].products.product_price,
+              image: data[0].products.product_image,
+              quantity: data[0].quantity,
+            });
+          }
+        }
+      }
+
+      setCartItems(mergedItems);
+      localStorage.removeItem('guest_cart');
+      showToast('Cart items merged successfully', 'success');
+
+    } catch (error) {
+      console.error('Error merging guest cart:', error);
+    }
+  }, [user?.id, showToast]);
+  
+useEffect(() => {
     let isMounted = true;
 
     const fetchCartItems = async () => {
@@ -75,11 +136,11 @@ function CartPage() {
               image: product,
               quantity: item.quantity,
             }));
-            
+
             setCartItems(formattedItems);
-            
+
             const guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
-            if (guestCart.length > 0) {
+            if (guestCart.length > 0 && user?.id) {
               await mergeGuestCartWithUserCart(guestCart, formattedItems);
             }
           }
@@ -97,65 +158,7 @@ function CartPage() {
     return () => {
       isMounted = false;
     };
-  }, [user?.id, userLoading, showToast]);
-
-  const mergeGuestCartWithUserCart = async (guestCart, userCart) => {
-    try {
-      const mergedItems = [...userCart];
-      
-      for (const guestItem of guestCart) {
-        const existingItemIndex = userCart.findIndex(
-          item => item.productId === guestItem.productId
-        );
-        
-        if (existingItemIndex >= 0) {
-          const newQuantity = userCart[existingItemIndex].quantity + guestItem.quantity;
-          await supabase
-            .from('cart_items')
-            .update({ quantity: newQuantity })
-            .eq('user_id', user.id)
-            .eq('product_id', guestItem.productId);
-          
-          mergedItems[existingItemIndex].quantity = newQuantity;
-        } else {
-          const { data, error } = await supabase
-            .from('cart_items')
-            .insert({
-              user_id: user.id,
-              product_id: guestItem.productId,
-              quantity: guestItem.quantity
-            })
-            .select(`
-              id,
-              product_id,
-              quantity,
-              products (
-                product_name,
-                product_price,
-                product_image
-              )
-            `);
-          
-          if (!error && data && data[0]) {
-            mergedItems.push({
-              id: data[0].id,
-              productId: data[0].product_id,
-              name: data[0].products.product_name,
-              price: data[0].products.product_price,
-              image: data[0].products.product_image,
-              quantity: data[0].quantity,
-            });
-          }
-        }
-      }
-      
-      setCartItems(mergedItems);
-      localStorage.removeItem('guest_cart');
-      showToast('Cart items merged successfully', 'success');
-    } catch (error) {
-      console.error('Error merging guest cart:', error);
-    }
-  };
+  }, [user?.id, userLoading, showToast, mergeGuestCartWithUserCart]);
 
   const updateQuantity = async (productId, change) => {
     setUpdateLoading(productId);
