@@ -1,2 +1,22 @@
-import react from 'eslint-plugin-react';
-export default [{ignores:['dist/**','test-results/**','playwright-report/**']},{files:['**/*.{jsx,js,mjs}'],languageOptions:{ecmaVersion:'latest',sourceType:'module',parserOptions:{ecmaFeatures:{jsx:true}}},plugins:{react},rules:{'no-unreachable':'error','no-dupe-keys':'error','no-constant-condition':'error','no-unused-vars':['error',{argsIgnorePattern:'^_'}],'react/jsx-uses-vars':'error','react/jsx-uses-react':'error','react/jsx-no-duplicate-props':'error'}}];
+import react from "eslint-plugin-react";
+export default [
+  { ignores: ["dist/**", "test-results/**", "playwright-report/**"] },
+  {
+    files: ["**/*.{jsx,js,mjs}"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      parserOptions: { ecmaFeatures: { jsx: true } },
+    },
+    plugins: { react },
+    rules: {
+      "no-unreachable": "error",
+      "no-dupe-keys": "error",
+      "no-constant-condition": "error",
+      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "react/jsx-uses-vars": "error",
+      "react/jsx-uses-react": "error",
+      "react/jsx-no-duplicate-props": "error",
+    },
+  },
+];

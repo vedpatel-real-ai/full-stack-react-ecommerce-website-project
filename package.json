@@ -1,6 +1,37 @@
 {
-  "name":"folio-supply","version":"1.0.0","private":true,"type":"module","engines":{"node":"24.x"},
-  "scripts":{"dev":"vite --host 127.0.0.1","build":"vite build","preview":"vite preview --host 127.0.0.1","test":"node --test tests/*.test.js","test:db":"node --test tests/postgres.test.js","test:e2e":"playwright test","format:check":"prettier --check .","check:secrets":"node scripts/verify.mjs","lint":"eslint ."},
-  "dependencies":{"react":"19.3.1","react-dom":"19.3.1","@electric-sql/pglite":"0.5.13"},
-  "devDependencies":{"vite":"8.3.6","@playwright/test":"1.65.1","@axe-core/playwright":"4.14.0","prettier":"3.9.10","embedded-postgres":"18.7.0-beta.19","pg":"8.23.1","eslint":"9.39.4","eslint-plugin-react":"7.37.5"}
+  "name": "folio-supply",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.js",
+    "test:db": "node --test tests/postgres.test.js",
+    "test:e2e": "playwright test",
+    "format:check": "prettier --check .",
+    "check:secrets": "node scripts/verify.mjs",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.13",
+    "@supabase/supabase-js": "2.118.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "sharp": "0.35.5"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.65.1",
+    "embedded-postgres": "18.7.0-beta.19",
+    "eslint": "9.39.4",
+    "eslint-plugin-react": "7.37.5",
+    "pg": "8.23.1",
+    "prettier": "3.9.10",
+    "vite": "8.3.6"
+  }
 }
