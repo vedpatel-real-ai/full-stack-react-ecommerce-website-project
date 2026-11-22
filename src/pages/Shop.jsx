@@ -129,21 +129,16 @@ export function Product({ id, version, refresh }) {
                 <Feedback action={action} />
               </section>
             </div>
-            <Reviews
-              key={p.sku}
-              sku={p.sku}
-              version={version}
-              refresh={refresh}
-            />
+            <Reviews key={p.sku} sku={p.sku} version={version} />
           </>
         );
       }}
     </Result>
   );
 }
-function Reviews({ sku, version, refresh }) {
+function Reviews({ sku, version }) {
   const s = useData(() => db.reviews(sku), [sku, version]);
-  const a = useAction(refresh);
+  const a = useAction();
   return (
     <section>
       <h2>Reader reviews</h2>
