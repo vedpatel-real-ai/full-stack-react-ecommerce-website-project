@@ -1,2 +1,3 @@
-NOT ORIGINAL CODE. THIS IS JUST FOR DEMO. CHECK LIVE WEBSITE LINK: https://www.gcmtshop.com
-Code base transferred from here to: https://github.com/gcmt1/gcmt-vercel-webiste-vedpatel-project.git
+# Folio Supply
+
+An independently implemented stationery storefront under development on this branch. The public runtime is an isolated demonstration. No merchant integration is active.

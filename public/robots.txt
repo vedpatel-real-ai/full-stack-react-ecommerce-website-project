@@ -1,3 +1,0 @@
-User-agent: *
-Allow: /
-Sitemap: https://novacommerce-demo.example/sitemap.xml
