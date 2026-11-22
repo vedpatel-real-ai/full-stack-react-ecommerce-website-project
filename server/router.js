@@ -92,7 +92,7 @@ export function sandboxRouter({
         await store.image({
           who,
           edition: sku,
-          position: slot,
+          image_slot: slot,
           encoded: raster.toString("base64"),
         });
         return reply(200, { saved: true });

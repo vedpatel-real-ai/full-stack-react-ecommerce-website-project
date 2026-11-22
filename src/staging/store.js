@@ -297,8 +297,8 @@ export function adminList(section, page) {
   return read(query.range(20 * page, 20 * page + 19));
 }
 export const images = (edition) => read(client.rpc("images", { edition }));
-export const removeImage = (edition, position) =>
-  read(client.rpc("remove_image", { edition, position }));
+export const removeImage = (edition, image_slot) =>
+  read(client.rpc("remove_image", { edition, image_slot }));
 export async function uploadImage(sku, slot, file) {
   if (!file || file.size > 2097152) throw Error("Use an image under 2 MB.");
   const res = await fetch(
