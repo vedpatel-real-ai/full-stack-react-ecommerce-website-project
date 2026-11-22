@@ -14,6 +14,7 @@ if (!existsSync("dist/index.html")) throw Error("Build before verifying");
 const built = walk("dist"),
   failures = [];
 const sensitive = [
+  /\b(?:working_?key|(?:cca(?:venue)?_)?working_key|smtp_password|service_role_key)\s*[:=]\s*["'][a-z\d/+_.=-]{12,}["']/i,
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
   /\b(?:sb_secret_|gh[pousr]_|re_)[A-Za-z0-9_-]{20,}/,
   /\beyJ[\w-]{12,}\.eyJ[\w-]{12,}\.[\w-]{16,}/,
