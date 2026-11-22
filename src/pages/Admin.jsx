@@ -1,3 +1,4 @@
+import { saveInboxPage } from "../csv.js";
 import React, { useState } from "react";
 import * as db from "@store";
 import {
@@ -273,6 +274,11 @@ export default function Admin({ version, refresh }) {
                   )}
                 </article>
               ),
+            )}
+            {["contact", "newsletter"].includes(section) && rows.length > 0 && (
+              <button onClick={() => saveInboxPage(rows, section, page)}>
+                Export this page as CSV
+              </button>
             )}
             <Pager page={page} set={set} count={rows.length} />
           </>

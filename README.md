@@ -66,6 +66,7 @@ React 19.3.1, Vite 8.3.6 and PGlite 0.5.13 power the demo. Both providers use th
 ```sh
 npm run format:check
 npm run lint
+npm run check:staging
 npm test
 npm run build
 npm run check:secrets

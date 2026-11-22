@@ -7,3 +7,13 @@ A missing callback leaves the payable pending. The worker interface returns an e
 Alert the responsible operator on exhausted retries, conflicting capture references, unexplained delays, rejected evidence or a provider timeout surge. There is no live pager configured. Track age from creation and next inquiry time. Keep reconciliation records until the owner approves retention and archival. Obtain authoritative records and independent sign-off before any financial correction.
 
 A refund request creates an audit event only. Record the merchant's actual settlement separately through a controlled evidence workflow. Staff archive records and record return or cancellation separately from payment. Cancelled fulfilment still needs review if a late capture arrives. Delete consented inbox data according to the approved retention schedule; financial statements follow a separate policy.
+
+## Private scheduler example
+
+The shipped command reports its unconfigured status and consumes zero retries. After the independent merchant deployment has a reviewed inquiry adapter, a private scheduler can call the same job entry point. The following cron expression uses a dedicated service account in an approved installation.
+
+```cron
+*/15 * * * * cd /srv/folio && node scripts/reconcile.mjs
+```
+
+No scheduler is installed by the public build.
