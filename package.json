@@ -15,7 +15,8 @@
     "test:e2e": "playwright test",
     "format:check": "prettier --check .",
     "check:secrets": "node scripts/verify.mjs",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "check:staging": "node scripts/check-staging.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.5.13",
