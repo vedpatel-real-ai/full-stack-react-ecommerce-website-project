@@ -103,12 +103,12 @@ The application contains customer pages, shared interface components, and dedica
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/gcmt1/gcmt-vercel-webiste-vedpatel-project.git
-cd gcmt-vercel-webiste-vedpatel-project
+git clone https://github.com/vedpatel-real-ai/full-stack-react-ecommerce-website-project.git
+cd full-stack-react-ecommerce-website-project
 npm ci
 ```
 
-The clone command retrieves the remote default branch. For this local handoff, use the reviewed `fix/gcmt-checkout-integrity` checkout or apply its verified patch to the baseline identified in the engineering audit.
+The clone command retrieves the reviewed source from `main`.
 
 The repository's `.npmrc` supplies the dependency-resolution settings used by this project.
 
@@ -233,4 +233,4 @@ When adapting the project for another domain, review the website metadata, sitem
 
 ## Repository
 
-Source and project updates: [gcmt1/gcmt-vercel-webiste-vedpatel-project](https://github.com/gcmt1/gcmt-vercel-webiste-vedpatel-project).
+Source and project updates: [vedpatel-real-ai/full-stack-react-ecommerce-website-project](https://github.com/vedpatel-real-ai/full-stack-react-ecommerce-website-project).
