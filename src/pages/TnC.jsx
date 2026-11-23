@@ -11,7 +11,7 @@ const PoliciesPage = () => {
       <section className="mb-10">
         <h2 className="text-2xl font-semibold mb-4">Refund & Cancellation Policy</h2>
         <p className="mb-2">
-          NovaCommerce is a portfolio demo marketplace. Please read this fictional Refund & Cancellation Policy before testing checkout.
+          At GCMT Shop, we are committed to providing high-quality herbal wellness products to our customers. Please read our Refund & Cancellation Policy carefully before making a purchase.
         </p>
         <p className="mb-2 font-semibold">1. Cancellations:</p>
         <p className="mb-2">We do not accept order cancellations once the order has been placed and confirmed. Kindly ensure that all details are accurate before confirming your purchase.</p>
@@ -48,7 +48,7 @@ const PoliciesPage = () => {
       {/* Privacy Policy */}
       <section className="mb-10">
         <h2 className="text-2xl font-semibold mb-4">Privacy Policy</h2>
-        <p className="mb-2">NovaCommerce is a self-contained demo that stores sample activity in your browser localStorage only.</p>
+        <p className="mb-2">GCMT Shop is committed to protecting your privacy. This policy outlines how we collect, use, and protect your personal information.</p>
         <p className="mb-2 font-semibold">1. Information We Collect:</p>
         <ul className="list-disc list-inside mb-2">
           <li>Full name</li>
@@ -77,7 +77,7 @@ const PoliciesPage = () => {
       {/* Delivery & Shipping Policy */}
       <section className="mb-10">
         <h2 className="text-2xl font-semibold mb-4">Delivery & Shipping Policy</h2>
-        <p className="mb-2">NovaCommerce displays fictional delivery estimates for demo orders. Please review the sample shipping policies below.</p>
+        <p className="mb-2">GCMT Shop is dedicated to ensuring timely and secure delivery of all orders across India. Please review our shipping policies below.</p>
         <p className="mb-2 font-semibold">1. Serviceable Locations:</p>
         <p className="mb-2">We currently ship our products across all major regions and cities within India. We do not offer international shipping at this time.</p>
         <p className="mb-2 font-semibold">2. Delivery Partner:</p>
@@ -92,7 +92,7 @@ const PoliciesPage = () => {
         <p className="mb-2 font-semibold">5. Shipping Charges:</p>
         <p className="mb-2">Any applicable shipping charges will be clearly mentioned at checkout before payment. We strive to keep shipping costs minimal.</p>
         <p className="mb-2 font-semibold">6. Delivery Delays:</p>
-        <p className="mb-2">Delivery dates are simulated for portfolio use and do not represent real logistics commitments.</p>
+        <p className="mb-2">While we aim for timely delivery, unforeseen circumstances (e.g., natural disasters, strikes, courier delays) may occasionally cause delays. GCMT Shop is not liable for such delays.</p>
         <p className="mb-2 font-semibold">7. Product Inspection:</p>
         <p className="mb-2">We ensure all products are packed securely. If you receive a damaged or incorrect item, please report it within <strong>48 hours of delivery</strong> for a replacement.</p>
         <p className="mb-2 font-semibold">8. Delivery Confirmation:</p>

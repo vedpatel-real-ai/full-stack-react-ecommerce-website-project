@@ -42,16 +42,16 @@ const FAQPage = () => {
   return (
     <div className="faq-page">
       <Helmet>
-        <title>Frequently Asked Questions | NovaCommerce</title>
+        <title>Frequently Asked Questions | GCMT Shop</title>
         <meta
           name="description"
-          content="Find answers to common questions about the NovaCommerce portfolio demo."
+          content="Find answers to common questions about GCMT Shop's herbal products, shipping, and more."
         />
         <meta
           name="keywords"
-          content="NovaCommerce FAQ, demo store questions, shipping, order tracking"
+          content="GCMT Shop FAQ, herbal product questions, shipping, order tracking"
         />
-        <link rel="canonical" href="https://novacommerce-demo.example/faq" />
+        <link rel="canonical" href="https://gcmtshop.com/faq" />
 
         {/* FAQPage JSON-LD */}
         <script type="application/ld+json">

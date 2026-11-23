@@ -1,245 +1,60 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import DefaultProductImage from "../assets/product.png";
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAppContext } from '../AppContext';
 import { useToast } from '../components/ToastContext';
 import { useNavigate } from 'react-router-dom';
+import { loadCart, readGuestCart, writeGuestCart, withGuestCart, cartKey, validQuantity } from '../utils/cart';
 import '../styles/CartPage.css';
-import product from '../assets/demo-product.svg';
 import { Trash2, Minus, Plus, ShoppingBag, ArrowLeft, Lock, Truck, Shield } from 'lucide-react';
-
 function CartPage() {
-  const [cartItems, setCartItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [userLoading, setUserLoading] = useState(true);
-  const [updateLoading, setUpdateLoading] = useState(null);
-  const [removeLoading, setRemoveLoading] = useState(null);
-  const { user } = useAppContext();
-  const { showToast } = useToast();
+  const [cartItems,setCartItems] = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [updateLoading,setUpdateLoading] = useState(null);
+  const [removeLoading,setRemoveLoading] = useState(null);
+  const {user,loading:userLoading} = useAppContext();
+  const {showToast} = useToast();
   const navigate = useNavigate();
-
-  // Wait for user authentication state to be determined
-  useEffect(() => {
-    const checkAuthState = async () => {
-      try {
-      await supabase.auth.getSession();
-      setUserLoading(false);
-      } catch (error) {
-        console.error('Auth state check error:', error);
-        setUserLoading(false);
-      }
-    };
-
-    if (user !== undefined) {
-      setUserLoading(false);
-    } else {
-      checkAuthState();
-    }
-  }, [user]);
-
-const mergeGuestCartWithUserCart = useCallback(async (guestCart, userCart) => {
-    try {
-      const mergedItems = [...userCart];
-
-      for (const guestItem of guestCart) {
-        const existingItemIndex = userCart.findIndex(
-          item => item.productId === guestItem.productId
-        );
-
-        if (existingItemIndex >= 0) {
-          const newQuantity =
-            userCart[existingItemIndex].quantity + guestItem.quantity;
-
-          await supabase
-            .from('cart_items')
-            .update({ quantity: newQuantity })
-            .eq('user_id', user.id)
-            .eq('product_id', guestItem.productId);
-
-          mergedItems[existingItemIndex].quantity = newQuantity;
-        } else {
-          const { data, error } = await supabase
-            .from('cart_items')
-            .insert({
-              user_id: user.id,
-              product_id: guestItem.productId,
-              quantity: guestItem.quantity
-            })
-            .select(`
-              id,
-              product_id,
-              quantity,
-              products (
-                product_name,
-                product_price,
-                product_image
-              )
-            `);
-
-          if (!error && data?.[0]) {
-            mergedItems.push({
-              id: data[0].id,
-              productId: data[0].product_id,
-              name: data[0].products.product_name,
-              price: data[0].products.product_price,
-              image: data[0].products.product_image,
-              quantity: data[0].quantity,
-            });
-          }
-        }
-      }
-
-      setCartItems(mergedItems);
-      localStorage.removeItem('guest_cart');
-      showToast('Cart items merged successfully', 'success');
-
-    } catch (error) {
-      console.error('Error merging guest cart:', error);
-    }
-  }, [user?.id, showToast]);
-  
-useEffect(() => {
-    let isMounted = true;
-
-    const fetchCartItems = async () => {
-      if (userLoading) return;
-      
-      setLoading(true);
-      try {
-        if (!user?.id) {
-          const guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
-          if (isMounted) {
-            setCartItems(guestCart);
-          }
-        } else {
-          const { data, error } = await supabase
-            .from('cart_items')
-            .select(`
-              id,
-              product_id,
-              quantity,
-              products (
-                product_name,
-                product_price,
-                product_image
-              )
-            `)
-            .eq('user_id', user.id);
-
-          if (error) throw error;
-
-          if (isMounted) {
-            const formattedItems = data.map(item => ({
-              id: item.id,
-              productId: item.product_id,
-              name: item.products.product_name,
-              price: item.products.product_price,
-              image: product,
-              quantity: item.quantity,
-            }));
-
-            setCartItems(formattedItems);
-
-            const guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
-            if (guestCart.length > 0 && user?.id) {
-              await mergeGuestCartWithUserCart(guestCart, formattedItems);
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Fetch cart error:', err.message);
-        showToast('Failed to load cart', 'error');
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    fetchCartItems();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user?.id, userLoading, showToast, mergeGuestCartWithUserCart]);
-
-  const updateQuantity = async (productId, change) => {
-    setUpdateLoading(productId);
-    const currentItem = cartItems.find(item => item.productId === productId);
-    const newQuantity = Math.max(1, currentItem.quantity + change);
-    
-    const updatedItems = cartItems.map(item =>
-      item.productId === productId
-        ? { ...item, quantity: newQuantity }
-        : item
-    );
-    setCartItems(updatedItems);
-
+  useEffect(()=>{
+    let active=true; if(userLoading) return;
+    setLoading(true);
+    loadCart(user?.id,supabase).then(items=>{if(active)setCartItems(items);}).catch(()=>showToast('Failed to load cart','error')).finally(()=>{if(active)setLoading(false);});
+    return ()=>{active=false;};
+  },[user?.id,userLoading,showToast]);
+  async function changeItem(item, change) {
+    const key = cartKey(item);
+    const quantity = item.quantity + change;
+    if (change && !validQuantity(quantity)) return;
+    const setBusy = change ? setUpdateLoading : setRemoveLoading;
+    setBusy(key);
     try {
       if (user) {
-        const { error } = await supabase
-          .from('cart_items')
-          .update({ quantity: newQuantity })
-          .eq('user_id', user.id)
-          .eq('product_id', productId);
-        if (error) throw error;
+        const table = supabase.from('cart_items');
+        const mutation = change ? table.update({quantity}) : table.delete();
+        const {data,error} = await mutation.eq('id',item.id).eq('user_id',user.id)
+          .eq('quantity',item.quantity).select('id').maybeSingle();
+        if (error || !data) throw new Error('Cart changed. Review the current quantities.');
       } else {
-        localStorage.setItem('guest_cart', JSON.stringify(updatedItems));
+        await withGuestCart(() => {
+          const rows = readGuestCart();
+          const current = rows.find(row => cartKey(row) === key);
+          if (!current || current.quantity !== item.quantity) throw new Error('Cart changed. Review the current quantities.');
+          if (change) current.quantity = quantity;
+          writeGuestCart(change ? rows : rows.filter(row=>cartKey(row)!==key));
+        });
       }
-    } catch (err) {
-      console.error('Update quantity error:', err.message);
-      showToast('Failed to update quantity', 'error');
-      const revertedItems = cartItems.map(item =>
-        item.productId === productId
-          ? { ...item, quantity: currentItem.quantity }
-          : item
-      );
-      setCartItems(revertedItems);
-    } finally {
-      setUpdateLoading(null);
+      window.dispatchEvent(new Event('cart-changed'));
+    } catch (error) { showToast(error.message || 'Unable to update the cart.','error'); }
+    finally {
+      try { setCartItems(await loadCart(user?.id,supabase)); }
+      catch { showToast('Unable to refresh the cart.','error'); }
+      setBusy(null);
     }
-  };
-
-  const removeItem = async productId => {
-    setRemoveLoading(productId);
-    const itemToRemove = cartItems.find(item => item.productId === productId);
-    const updatedItems = cartItems.filter(item => item.productId !== productId);
-    setCartItems(updatedItems);
-
-    try {
-      if (user) {
-        const { error } = await supabase
-          .from('cart_items')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('product_id', productId);
-        if (error) throw error;
-      } else {
-        localStorage.setItem('guest_cart', JSON.stringify(updatedItems));
-      }
-      showToast('Item removed from cart', 'success');
-    } catch (err) {
-      console.error('Remove item error:', err.message);
-      showToast('Failed to remove item', 'error');
-      setCartItems(prevItems => [...prevItems, itemToRemove]);
-    } finally {
-      setRemoveLoading(null);
-    }
-  };
-
-  const handlePlaceOrder = async () => {
-    if (cartItems.length === 0) {
-      showToast('Your cart is empty', 'error');
-      return;
-    }
-    
-    navigate('/checkout');
-  };
-
-  const calculateTotal = () =>
-    cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    
-  const calculateSubtotal = (price, quantity) => price * quantity;
-
-  const getTotalItems = () => cartItems.reduce((sum, item) => sum + item.quantity, 0);
-
+  }
+  const handlePlaceOrder = ()=>{if(cartItems.length)navigate('/checkout');else showToast('Your cart is empty.','error');};
+  const calculateTotal=()=>cartItems.reduce((sum,item)=>sum+item.price*item.quantity,0);
+  const calculateSubtotal=(price,quantity)=>price*quantity;
+  const getTotalItems=()=>cartItems.reduce((sum,item)=>sum+item.quantity,0);
   if (userLoading) {
     return (
       <div className="cart-loading-container">
@@ -323,21 +138,21 @@ useEffect(() => {
             <div className="cart-items-section">
               <div className="cart-items-container">
                 {cartItems.map(item => (
-                  <div key={item.productId} className="cart-item">
+                  <div key={cartKey(item)} className="cart-item">
                     <div className="cart-item-content">
                       <div className="cart-item-main">
                         <div className="cart-item-image-container">
                           <img
-                            src={item.image}
+                            src={item.image || DefaultProductImage}
                             alt={item.name}
                             className="cart-item-image"
                             onError={(e) => {
-                              e.target.src = '/placeholder-image.png';
+                              if (e.currentTarget.getAttribute('src') !== DefaultProductImage) e.currentTarget.src = DefaultProductImage;
                             }}
                           />
                         </div>
                         <div className="cart-item-details">
-                          <h3 className="cart-item-name">{item.name}</h3>
+                          <h3 className="cart-item-name">{item.name}{item.variant && ` · ${item.variant}`}</h3>
                           <p className="cart-item-price">
                             ₹{item.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </p>
@@ -348,14 +163,14 @@ useEffect(() => {
                           <button
                             type="button"
                             className="quantity-button"
-                            onClick={() => updateQuantity(item.productId, -1)}
-                            disabled={item.quantity === 1 || updateLoading === item.productId}
+                            onClick={() => changeItem(item, -1)}
+                            disabled={item.quantity === 1 || updateLoading === cartKey(item)}
                             aria-label={`Decrease quantity of ${item.name}`}
                           >
                             <Minus size={16} />
                           </button>
                           <div className="quantity-display">
-                            {updateLoading === item.productId ? (
+                            {updateLoading === cartKey(item) ? (
                               <div className="quantity-loading"></div>
                             ) : (
                               item.quantity
@@ -364,8 +179,8 @@ useEffect(() => {
                           <button
                             type="button"
                             className="quantity-button"
-                            onClick={() => updateQuantity(item.productId, 1)}
-                            disabled={updateLoading === item.productId}
+                            onClick={() => changeItem(item, 1)}
+                            disabled={updateLoading === cartKey(item)}
                             aria-label={`Increase quantity of ${item.name}`}
                           >
                             <Plus size={16} />
@@ -379,11 +194,11 @@ useEffect(() => {
                         <button
                           type="button"
                           className="remove-button"
-                          onClick={() => removeItem(item.productId)}
-                          disabled={removeLoading === item.productId}
+                          onClick={() => changeItem(item, 0)}
+                          disabled={removeLoading === cartKey(item)}
                           aria-label={`Remove ${item.name} from cart`}
                         >
-                          {removeLoading === item.productId ? (
+                          {removeLoading === cartKey(item) ? (
                             <div className="remove-loading"></div>
                           ) : (
                             <Trash2 size={16} />

@@ -1,5 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
+import { gatewayUrls } from "../../shared/gateway.js";
+import React, { useState, useEffect, useRef } from 'react';
+import { supabase, ensureCheckoutUser } from '../supabaseClient';
+import { loadCart, mergeGuestCart } from '../utils/cart';
+import { authenticatedFetch } from '../utils/api';
 import { useAppContext } from '../AppContext';
 import { useToast } from '../components/ToastContext';
 import { useNavigate } from 'react-router-dom';
@@ -9,10 +12,12 @@ export default function Checkout() {
   const { user } = useAppContext();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const submitting = useRef(false);
+
 
   // Responsiveness
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -35,66 +40,20 @@ export default function Checkout() {
   });
 
   // ==================== CART MANAGEMENT ====================
-  
+
   useEffect(() => {
-    fetchCart();
-  }, [user?.id]);
-
-  const fetchCart = async () => {
+    let active = true;
     setLoadingCart(true);
-    try {
-      if (!user?.id) {
-        // Guest cart (sessionStorage)
-        const guestCart = JSON.parse(sessionStorage.getItem('guest_cart')) || [];
-        setCartItems(guestCart);
-      } else {
-        // Logged-in user cart (Supabase)
-        const { data, error } = await supabase
-          .from('cart_items')
-          .select(`
-            id,
-            product_id,
-            quantity,
-            products:products (id, product_name, product_price, product_image)
-          `)
-          .eq('user_id', user.id);
-
-        if (error) throw error;
-
-        setCartItems(
-          data.map(item => ({
-            id: item.id,
-            productId: item.product_id,
-            name: item.products?.product_name ?? 'Unknown',
-            price: item.products?.product_price ?? 0,
-            image: item.products?.product_image ?? '',
-            quantity: item.quantity,
-          }))
-        );
-      }
-    } catch (err) {
-      console.error('Fetch cart error:', err.message);
-      showToast('Failed to load cart', 'error');
-    } finally {
-      setLoadingCart(false);
-    }
-  };
-
-  const clearCart = useCallback(async () => {
-    try {
-      if (user?.id) {
-        await supabase.from('cart_items').delete().eq('user_id', user.id);
-      } else {
-        sessionStorage.removeItem('guest_cart');
-      }
-      setCartItems([]);
-    } catch (err) {
-      console.error('Error clearing cart:', err);
-    }
-  }, [user?.id]);
+    setCartItems([]);
+    loadCart(user?.id, supabase)
+      .then(items => { if (active) setCartItems(items); })
+      .catch(() => { if (active) showToast('Failed to load cart', 'error'); })
+      .finally(() => { if (active) setLoadingCart(false); });
+    return () => { active = false; };
+  }, [user?.id, showToast]);
 
   // ==================== FORM HANDLING ====================
-  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -102,7 +61,7 @@ export default function Checkout() {
 
   const validateForm = () => {
     const requiredFields = ['name', 'email', 'phone', 'street', 'city', 'state', 'pincode'];
-    
+
     // Check for empty fields
     for (let field of requiredFields) {
       if (!formData[field]?.trim()) {
@@ -136,143 +95,93 @@ export default function Checkout() {
   };
 
   // ==================== CALCULATIONS ====================
-  
+
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = 0; // Free shipping
   const total = subtotal + shipping;
-  
+
   const formatCurrency = (amount) =>
-    new Intl.NumberFormat('en-IN', { 
-      style: 'currency', 
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2 
+      maximumFractionDigits: 2
     }).format(amount);
 
-  // ==================== ORDER CREATION ====================
-  
-  const createOrder = async () => {
-    if (!validateForm()) return null;
-
-    if (cartItems.length === 0) {
-      showToast('Your cart is empty. Add items before checkout.', 'error');
-      return null;
-    }
-
-    try {
-      // Get current user ID (can be null for guests)
-      const currentUserId = user?.id || null;
-
-      console.log('📝 Creating order with user ID:', currentUserId);
-
-      const product_list = cartItems.map((item) => ({
-        product_id: item.productId,
-        name: item.name,
-        quantity: item.quantity,
-        unit_price: item.price,
-        total_price: item.price * item.quantity,
-      }));
-
-      const generatedPaymentId = `DEMO-PAY-${Date.now()}`;
-      
-      const orderData = {
-        user_id: currentUserId,
-        user_name: formData.name.trim(),
-        user_email: formData.email.trim().toLowerCase(),
-        user_phone: formData.phone.trim(),
-        address_line: formData.street.trim(),
-        city: formData.city.trim(),
-        state: formData.state.trim(),
-        postal_code: formData.pincode.trim(),
-        product_list,
-        total_amount: total,
-        payment_status: 'COMPLETED',
-        order_status: 'PROCESSING',
-        created_at: new Date().toISOString(),
-        payment_id: generatedPaymentId,
-      };
-
-      console.log('📋 Order data to be inserted:', {
-        ...orderData,
-        product_list: orderData.product_list.length + ' items'
-      });
-
-      const { data, error } = await supabase
-        .from('orders')
-        .insert([orderData])
-        .select('id, payment_id, user_id')
-        .single();
-
-      if (error) throw error;
-
-      console.log('✅ Order created successfully:', data);
-
-      return {
-        orderId: data.id,
-        paymentId: data.payment_id,
-        userId: data.user_id
-      };
-    } catch (err) {
-      console.error('Error creating order:', err);
-      throw new Error(`Failed to create order: ${err.message}`);
-    }
-  };
-
-  // ==================== FORM SUBMISSION ====================
-  
-  const handleSubmitForm = async () => {
-    if (!validateForm()) return;
-    
-    if (cartItems.length === 0) {
-      showToast('Your cart is empty. Add items before checkout.', 'error');
-      return;
-    }
-
+  const handleSubmitForm = () => {
+    if (!validateForm() || !cartItems.length) return;
     setFormSubmitted(true);
-    showToast('Contact information validated! Click "Pay Now" to proceed with payment.', 'success');
   };
-
-  // ==================== PAYMENT PROCESSING ====================
-  
-  const handleOnlinePayment = async () => {
-    if (!formSubmitted) {
-      showToast('Please submit your contact information first.', 'error');
-      return;
-    }
-
-    if (cartItems.length === 0) {
-      showToast('Your cart is empty.', 'error');
-      return;
-    }
-
+  const placeOrder = async (method) => {
+    if (!formSubmitted || !validateForm() || !cartItems.length || submitting.current) return;
+    submitting.current = true;
     setLoading(true);
     try {
-      const orderResult = await createOrder();
-      if (!orderResult) {
-        setLoading(false);
+      const owner = await ensureCheckoutUser();
+      await mergeGuestCart(owner.id, supabase);
+      const key = `gcmt-checkout:${owner.id}:${method}`;
+      const attemptId = sessionStorage.getItem(key) || crypto.randomUUID();
+      sessionStorage.setItem(key, attemptId);
+      const result = await authenticatedFetch('/api/create-order', {
+        method: 'POST',
+        signal: AbortSignal.timeout(20000),
+        body: JSON.stringify({
+          attemptId,
+          ...(method === 'cod' && {method}),
+          shipping: formData,
+          expectedPaise: Math.round(total * 100),
+          expectedLines: cartItems.map(item => ({
+            productId: String(item.productId), variant: item.variant || '',
+            quantity: item.quantity, unitPaise: Math.round(item.price * 100),
+          })),
+        }),
+      });
+      if (result.existing || result.cod) {
+        sessionStorage.removeItem(key);
+        navigate('/payment-success?payment_id=' + encodeURIComponent(result.paymentId));
         return;
       }
-
-      await clearCart();
-      showToast('Payment Successful. Thank you for your purchase.', 'success');
-      navigate(`/payment-success?order_id=${orderResult.orderId}`);
-
-    } catch (err) {
-      console.error('💥 Payment initiation error:', err);
-      showToast(`Payment failed: ${err.message}`, 'error');
+      if (result.totalPaise !== Math.round(total * 100) ||
+          !Object.values(gatewayUrls).includes(result.gatewayUrl) ||
+          !result.encRequest || !result.accessCode) {
+        throw new Error('Unable to open payment. Check your order status.');
+      }
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = result.gatewayUrl;
+      form.hidden = true;
+      for (const [name, value] of Object.entries({encRequest:result.encRequest, access_code:result.accessCode})) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      }
+      document.body.appendChild(form);
+      try { form.submit(); } finally { form.remove(); }
+      sessionStorage.removeItem(key);
+    } catch (error) {
+      setFormSubmitted(false);
+      try {
+        const current = (await supabase.auth.getSession()).data.session?.user?.id;
+        setCartItems(await loadCart(current, supabase));
+      } catch {}
+      showToast(error.name === 'TimeoutError' ? 'Checkout timed out. Check your orders before trying again.' : error.message || 'Checkout could not be completed.', 'error');
+    } finally {
       setLoading(false);
+      submitting.current = false;
     }
   };
 
   // ==================== RENDER COMPONENTS ====================
-  
+
   const renderShippingForm = () => (
     <div className="checkout-card">
       <h2>Shipping Information</h2>
       <div className="checkout-card-body">
         {Object.keys(formData).map((field) => (
           <div key={field} className="form-group">
-            <label>
+            <label htmlFor={`shipping-${field}`}>
               {field.charAt(0).toUpperCase() +
                 field.slice(1).replace(/([A-Z])/g, ' $1')}
               <span style={{ color: 'red' }}> *</span>
@@ -285,6 +194,8 @@ export default function Checkout() {
                   ? 'tel'
                   : 'text'
               }
+              id={`shipping-${field}`}
+              required
               name={field}
               value={formData[field]}
               onChange={handleChange}
@@ -313,7 +224,7 @@ export default function Checkout() {
             />
           </div>
         ))}
-        
+
         {!formSubmitted && (
           <button
             onClick={handleSubmitForm}
@@ -323,7 +234,7 @@ export default function Checkout() {
             Continue to Payment
           </button>
         )}
-        
+
         {formSubmitted && (
           <div className="success-message">
             ✓ Contact information confirmed
@@ -362,7 +273,7 @@ export default function Checkout() {
                     />
                   )}
                   <div className="order-item-info">
-                    <div className="item-name">{item.name}</div>
+                    <div className="item-name">{item.name}{item.variant && ` · ${item.variant}`}</div>
                     <div className="item-quantity">Qty: {item.quantity}</div>
                     <div className="item-unit-price">
                       {formatCurrency(item.price)} each
@@ -378,7 +289,7 @@ export default function Checkout() {
         ) : (
           <div className="empty-cart-message">
             <p>No items in cart</p>
-            <button 
+            <button
               onClick={() => navigate('/products')}
               className="btn btn-outline"
             >
@@ -386,7 +297,7 @@ export default function Checkout() {
             </button>
           </div>
         )}
-        
+
         {cartItems.length > 0 && (
           <>
             <div className="summary-row">
@@ -430,11 +341,11 @@ export default function Checkout() {
         >
           Return to Cart
         </button>
-        
+
         {formSubmitted && (
           <div className="payment-methods">
             <button
-              onClick={handleOnlinePayment}
+              onClick={() => placeOrder('online')}
               disabled={loading}
               className="btn btn-success payment-btn"
             >
@@ -444,15 +355,20 @@ export default function Checkout() {
                   Processing...
                 </>
               ) : (
-                `Simulate Payment ${formatCurrency(total)}`
+                `Pay ${formatCurrency(total)} Now`
               )}
             </button>
+            {import.meta.env.REACT_APP_COD_ENABLED === 'true' && (
+              <button className="btn btn-outline" disabled={loading} onClick={() => placeOrder('cod')}>
+                Place cash-on-delivery order
+              </button>
+            )}
             <p className="payment-note">
-              Demo checkout. No external payment service is contacted.
+              🔒 Secure payment powered by CCAvenue
             </p>
           </div>
         )}
-        
+
         {!formSubmitted && (
           <div className="payment-info">
             Please fill in your contact information to proceed with payment
@@ -463,7 +379,7 @@ export default function Checkout() {
   };
 
   // ==================== MAIN RENDER ====================
-  
+
   return (
     <div className="checkout-container">
       <div className="checkout-wrapper">

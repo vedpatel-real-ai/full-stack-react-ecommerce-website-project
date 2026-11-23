@@ -3,11 +3,13 @@ import { ArrowRight, Instagram, Star, Shield, Truck, Award, Leaf, Play, X } from
 import ProductCard from '../components/ProductCard';
 import { supabase } from '../supabaseClient'; // Import supabase client
 import '../styles/HomePage.css';
-import DemoImage from '../assets/demo-product.svg';
+import GCMTVideo from '../assets/marketing-video.mp4'; // Import marketing video
+import GCMTLogo from '../assets/GCMT-logo.webp';
 import { redirect } from 'react-router-dom';
 
 const HomePage = () => {
   const [products, setProducts] = useState([]);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -64,22 +66,20 @@ const HomePage = () => {
   ];
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .limit(3); // Fetch only 3 products for the homepage
-      
-      if (error) {
-        console.error('Error fetching products:', error.message);
-      } else {
-        setProducts(data);
+    let active = true;
+    async function fetchProducts() {
+      try {
+        const { data, error } = await supabase.from('products').select('*').limit(3);
+        if (error) throw error;
+        if (active) setProducts(data || []);
+      } catch {
+        if (active) setLoadError(true);
+      } finally {
+        if (active) setLoading(false);
       }
-      setLoading(false);
-    };
-
+    }
     fetchProducts();
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -91,6 +91,16 @@ const HomePage = () => {
 
   return (
     <div className="homepage">
+      {/*
+        Mobile priority: the DOM order below is unchanged (good for SEO
+        and for tablet/desktop visitors), but on phone screens the
+        "Featured Products" section is visually moved to the very top
+        (above even the announcement bar) via flexbox `order` in
+        HomePage.css, so shoppers land straight on the product cards —
+        each showing only a direct "Buy Now" button — as soon as they
+        open the site, instead of scrolling past the hero first.
+      */}
+
       {/* Announcement Bar */}
       <div className="announcement-bar">
         <p>🎉 Free shipping on your first order | 100% Secure Checkout | Limited Time Offer! | UPI Available</p>
@@ -146,8 +156,9 @@ const HomePage = () => {
                   loop
                   muted
                   playsInline
-                  poster={DemoImage}
+                  poster={GCMTLogo}
                 >
+                  <source src={GCMTVideo} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>
@@ -195,9 +206,9 @@ const HomePage = () => {
                 <div className="loading-spinner" />
                 <p>Loading our amazing products...</p>
               </div>
-            ) : (
+            ) : loadError ? <p role="alert">Featured products could not be loaded. Refresh to try again.</p> : (
               products.map((product) => (
-                <ProductCard key={product.id} productId={product.id} />
+                <ProductCard key={product.id} productId={product.id} catalogProduct={product} hideAddToCart />
               ))
             )}
           </div>
@@ -218,8 +229,8 @@ const HomePage = () => {
           <div className="benefits-grid">
             <div className="benefits-image-container">
               <img 
-                src={DemoImage}
-                alt="NovaCommerce demo products" 
+                src={GCMTLogo}
+                alt="GCMT Herbal Products" 
                 className="benefits-image"
               />
               <div className="benefits-badge">
@@ -230,7 +241,7 @@ const HomePage = () => {
             
             <div className="benefits-content">
               <h2 className="benefits-title">
-                The NovaCommerce <span className="text-gradient">Demo</span> Difference
+                The GCMT <span className="text-gradient">Herbal</span> Difference
               </h2>
               <p className="benefits-subtitle">
                 Experience the perfect blend of ancient wisdom and modern innovation
@@ -312,12 +323,12 @@ const HomePage = () => {
               Follow Our <span className="text-gradient">Journey</span>
             </h2>
             <a 
-              href="https://example.com/novacommerce-social" 
+              href="https://www.instagram.com/gcmt.shop.official/?utm_source=ig_web_button_share_sheet" 
               target="_blank" 
               rel="noopener noreferrer"
               className="instagram-link"
             >
-              @novacommerce.demo <Instagram />
+              @gcmt.shop.official <Instagram />
             </a>
           </div>
           
@@ -325,8 +336,8 @@ const HomePage = () => {
             {[...Array(4)].map((_, i) => (
               <div key={i} className="instagram-post">
                 <img 
-                  src={DemoImage}
-                  alt={`NovaCommerce demo post ${i+1}`} 
+                  src={GCMTLogo} // Replace with actual Instagram post image
+                  alt={`Instagram post ${i+1}`} 
                 />
                 <div className="instagram-overlay">
                   <Instagram />
@@ -351,6 +362,7 @@ const HomePage = () => {
               controls
               autoPlay
             >
+              <source src={GCMTVideo} type="video/mp4" />
               Your browser does not support the video tag.
             </video>
           </div>

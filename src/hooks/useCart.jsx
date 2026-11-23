@@ -1,72 +1,37 @@
-// src/hooks/useCart.js
-import { useState } from 'react';
-import { supabase } from '../supabaseClient';
-
-export const useCart = () => {
+import { useState } from "react";
+import { supabase } from "../supabaseClient";
+import { readGuestCart, writeGuestCart, validQuantity, withGuestCart, cartKey, addStoredItem } from "../utils/cart";
+export function useCart() {
   const [loading, setLoading] = useState(false);
-
-  const addToCart = async (productId, quantity = 1) => {
+  const addToCart = async (productId, quantity = 1, variant = "") => {
+    if (!validQuantity(quantity) || productId == null) return false;
     setLoading(true);
     try {
       const {
         data: { session },
-        error: sessionError
+        error,
       } = await supabase.auth.getSession();
-
-      if (sessionError) throw sessionError;
-
-      const user = session?.user;
-
-      if (user) {
-        // Check for existing item
-        const { data: existing, error: selectError } = await supabase
-          .from('cart_items')
-          .select('id, quantity')
-          .eq('user_id', user.id)
-          .eq('product_id', productId)
-          .single();
-
-        if (selectError && selectError.code !== 'PGRST116') {
-          throw selectError;
-        }
-
-        if (existing) {
-          const { error: updErr } = await supabase
-            .from('cart_items')
-            .update({ quantity: existing.quantity + quantity })
-            .eq('id', existing.id);
-
-          if (updErr) throw updErr;
-        } else {
-          const { error: insErr } = await supabase
-            .from('cart_items')
-            .insert([{ user_id: user.id, product_id: productId, quantity }]);
-
-          if (insErr) throw insErr;
-        }
-
-        return true;
+      if (error) throw error;
+      if (session?.user) {
+        await addStoredItem(supabase,{productId,quantity,variant,operationId:crypto.randomUUID()});
+        window.dispatchEvent(new Event("cart-changed"));
       } else {
-        // Guest user
-        const guestCart = JSON.parse(sessionStorage.getItem('guest_cart')) || [];
-        const idx = guestCart.findIndex(i => i.productId === productId);
-
-        if (idx > -1) {
-          guestCart[idx].quantity += quantity;
-        } else {
-          guestCart.push({ productId, quantity });
-        }
-        sessionStorage.setItem('guest_cart', JSON.stringify(guestCart));
-
-        return true;
+        await withGuestCart(() => {
+        const cart = readGuestCart();
+        const existing = cart.find((item) => cartKey(item) === cartKey({productId,variant}));
+        const next = (existing?.quantity || 0) + quantity;
+        if (!validQuantity(next)) throw new Error("Quantity limit exceeded");
+        if (existing) existing.quantity = next;
+        else cart.push({ productId, quantity, variant });
+        writeGuestCart(cart);
+        });
       }
-    } catch (err) {
-      console.error('🚨 Cart error:', err);
+      return true;
+    } catch {
       return false;
     } finally {
       setLoading(false);
     }
   };
-
   return { addToCart, loading };
-};
+}

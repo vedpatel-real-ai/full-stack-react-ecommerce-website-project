@@ -2,22 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import AddToCartButton from './AddToCartButton';
-import { Star, ShoppingCart, Eye, Heart } from 'lucide-react';
+import { useCart } from '../hooks/useCart';
+import { useToast } from './ToastContext';
+import { Star, ShoppingCart, Eye, Heart, Zap } from 'lucide-react';
 import '../styles/ProductCard.css';
-import DefaultProductImage from '../assets/demo-product.svg';
+import DefaultProductImage from '../assets/product.png';
 
-export default function ProductCard({ productId }) {
+export default function ProductCard({ productId, catalogProduct, hideAddToCart = false }) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [buyNowLoading, setBuyNowLoading] = useState(false);
   const navigate = useNavigate();
+  const { addToCart } = useCart();
+  const { showToast } = useToast();
 
   useEffect(() => {
     async function fetchProduct() {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = catalogProduct ? {data:catalogProduct} : await supabase
         .from('products')
         .select('*')
         .eq('id', productId)
@@ -29,12 +34,12 @@ export default function ProductCard({ productId }) {
       } else {
         let imageUrl = DefaultProductImage;
         if (data.product_image) {
-          const { data: imageData, error: imageError } = supabase
-            .storage
-            .from('product-image')
-            .getPublicUrl(data.product_image);
-          if (!imageError && imageData && imageData.publicUrl) {
-            imageUrl = imageData.publicUrl;
+          const first = String(data.product_image).split(',')[0].trim();
+          if (first.startsWith('/') && !first.startsWith('//')) imageUrl=first;
+          else if (/^https?:\/\//i.test(first)) imageUrl = first;
+          else if (first) {
+            const {data:imageData} = supabase.storage.from('product-image').getPublicUrl(first);
+            imageUrl=imageData?.publicUrl || DefaultProductImage;
           }
         }
 
@@ -49,8 +54,9 @@ export default function ProductCard({ productId }) {
             : null,
           image: imageUrl,
           category: data.category,
-          rating: data.rating || 4.5,
-          inStock: data.in_stock !== false,
+          hasSizes: Boolean(data.size?.trim()),
+          rating: Number(data.rating),
+          inStock: data.in_stock !== false && (data.stock == null || data.stock > 0),
         };
         setProduct(productData);
       }
@@ -58,7 +64,7 @@ export default function ProductCard({ productId }) {
     }
 
     fetchProduct();
-  }, [productId]);
+  }, [productId,catalogProduct]);
 
   const handleCardClick = () => {
     navigate(`/product/${productId}`);
@@ -72,6 +78,24 @@ export default function ProductCard({ productId }) {
   const handleQuickView = (e) => {
     e.stopPropagation();
     navigate(`/product/${productId}`);
+  };
+
+  // Buy Now: adds the product straight to the cart and takes the
+  // customer directly to checkout, skipping an extra "view cart" step.
+  const handleBuyNow = async (e) => {
+    e.stopPropagation();
+    if (!product?.inStock || buyNowLoading) return;
+
+    if (product.hasSizes) { navigate(`/product/${productId}`); return; }
+    setBuyNowLoading(true);
+    const success = await addToCart(product.id, 1);
+    setBuyNowLoading(false);
+
+    if (success) {
+      navigate('/checkout');
+    } else {
+      showToast('❌ Could not start checkout. Please try again.', 'error');
+    }
   };
 
   if (loading) {
@@ -104,8 +128,7 @@ export default function ProductCard({ productId }) {
             alt={product.name}
             className="product-card__image"
             onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = DefaultProductImage;
+              if (e.currentTarget.getAttribute('src') !== DefaultProductImage) e.currentTarget.src = DefaultProductImage;
             }}
           />
 
@@ -144,7 +167,7 @@ export default function ProductCard({ productId }) {
 
           <h3 className="product-card__name">{product.name}</h3>
 
-          <div className="product-card__rating">
+          {product.rating > 0 && product.rating <= 5 && <div className="product-card__rating">
             <div className="product-card__stars">
               {[...Array(5)].map((_, i) => (
                 <Star 
@@ -157,7 +180,7 @@ export default function ProductCard({ productId }) {
               ))}
             </div>
             <span className="product-card__rating-value">{product.rating}</span>
-          </div>
+          </div>}
 
           {product.shortDescription && (
             <p className="product-card__description">{product.shortDescription}</p>
@@ -177,15 +200,30 @@ export default function ProductCard({ productId }) {
       </div>
 
       <div className="product-card__footer" onClick={(e) => e.stopPropagation()}>
-        <AddToCartButton 
-          productId={product.id} 
-          quantity={1} 
-          disabled={!product.inStock}
-          className="product-card__add-to-cart-btn"
-        >
-          <ShoppingCart size={16} />
-          <span>{product.inStock ? 'Add to Cart' : 'Out of Stock'}</span>
-        </AddToCartButton>
+        <div className={`product-card__button-group ${hideAddToCart ? 'product-card__button-group--single' : ''}`}>
+          {!hideAddToCart && !product.hasSizes && (
+            <AddToCartButton 
+              productId={product.id} 
+              quantity={1} 
+              disabled={!product.inStock}
+              className="product-card__add-to-cart-btn"
+            >
+              <ShoppingCart size={16} />
+              <span>{product.inStock ? 'Add to Cart' : 'Out of Stock'}</span>
+            </AddToCartButton>
+          )}
+
+          <button
+            type="button"
+            className="product-card__buy-now-btn"
+            onClick={handleBuyNow}
+            disabled={!product.inStock || buyNowLoading}
+            aria-label="Buy now"
+          >
+            <Zap size={16} />
+            <span>{buyNowLoading ? 'Processing...' : 'Buy Now'}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

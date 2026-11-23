@@ -52,12 +52,12 @@ const ContactPage = () => {
   return (
     <>
     <Helmet>
-  <title>Contact NovaCommerce | Portfolio Demo Marketplace</title>
-  <meta name="description" content="Contact NovaCommerce for fictional demo support and product inquiries." />
-  <meta property="og:title" content="Contact NovaCommerce" />
-  <meta property="og:description" content="Reach out to NovaCommerce for demo support or product inquiries." />
-  <meta property="og:url" content="https://novacommerce-demo.example/contact" />
-  <link rel="canonical" href="https://novacommerce-demo.example/contact" />
+  <title>Contact GCMT Shop | Herbal & Natural Products</title>
+  <meta name="description" content="Contact GCMT Shop for queries about herbal and natural products. We are here to help customers across India." />
+  <meta property="og:title" content="Contact GCMT Shop" />
+  <meta property="og:description" content="Reach out to GCMT Shop for support or product inquiries." />
+  <meta property="og:url" content="https://gcmtshop.com/contact" />
+  <link rel="canonical" href="https://gcmtshop.com/contact" />
 </Helmet>
 
     <div className="contact-page-container">
@@ -78,7 +78,7 @@ const ContactPage = () => {
               <Mail className="contact-icon" size={20} />
               <div>
                 <h3>Email Us</h3>
-                <p>hello@novacommerce-demo.com</p>
+                <p>gcmtshop@gmail.com</p>
               </div>
             </div>
             
@@ -86,7 +86,7 @@ const ContactPage = () => {
               <Phone className="contact-icon" size={20} />
               <div>
                 <h3>Call Us</h3>
-                <p>555-010-2040</p>
+                <p>+91 7623818818</p>
               </div>
             </div>
             
@@ -109,7 +109,7 @@ const ContactPage = () => {
 
           <div className="contact-map-container" style={{ marginTop: '2rem', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
             <iframe
-              title="NovaCommerce Demo Location"
+              title="GCMT Location"
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d916.9431741744382!2d72.63798276954469!3d23.1784947315469!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395c2b04fbd7dd33%3A0xcf022e3710e23b2b!2sCHASE%20WORLDWIDE%20LLP!5e0!3m2!1sen!2sin!4v1750873411942!5m2!1sen!2sin"
               width="100%"
               height="220"

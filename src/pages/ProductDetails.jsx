@@ -1,3 +1,4 @@
+import DefaultProductImage from "../assets/product.png";
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -42,7 +43,7 @@ const ProductDetail = () => {
 
         // Process the data
         const variants = prodData.size 
-          ? prodData.size.split(',').map(v => v.trim()) 
+          ? prodData.size.split(',').map(v => v.trim()).filter(Boolean)
           : [];
 
         // Process key benefits - handle Postgres array format
@@ -84,10 +85,10 @@ const ProductDetail = () => {
 
         // Fallback to placeholder if no images
         if (images.length === 0) {
-          images = ['/api/placeholder/500/500'];
+          images = [DefaultProductImage];
         }
 
-        console.log('Processed images:', images); // Debug log to verify images are processed correctly
+         // Debug log to verify images are processed correctly
 
         const productData = {
           id: prodData.id,
@@ -96,9 +97,9 @@ const ProductDetail = () => {
           price: prodData.product_price,
           discountPrice,
           discount: prodData.product_discount ? `${prodData.product_discount}%` : null,
-          rating: 4.5, // Default value
-          reviews: "1+", // Will be updated by ReviewSystem component
-          stock: prodData.stock || 50, // Default stock if not provided
+          rating: Number(prodData.rating) || null,
+
+          quantityLimit: prodData.in_stock === false ? 0 : Math.min(100, prodData.stock ?? 100),
           sku: id,
           images, // Now properly handles multiple images
           variants,
@@ -244,7 +245,7 @@ const ProductDetail = () => {
   };
 
   const increaseQuantity = () => {
-    if (quantity < product?.stock) {
+    if (quantity < product?.quantityLimit) {
       setQuantity(q => q + 1);
     }
   };
@@ -272,7 +273,7 @@ const ProductDetail = () => {
 
   // Handle image load error
   const handleImageError = (e) => {
-    e.target.src = '/api/placeholder/500/500';
+    if (e.currentTarget.getAttribute('src') !== DefaultProductImage) e.currentTarget.src = DefaultProductImage;
   };
 
   if (loading) {
@@ -310,13 +311,13 @@ const ProductDetail = () => {
     <>
   <Helmet>
     {/* Page Meta */}
-    <title>{product.name} | NovaCommerce</title>
+    <title>{product.name} | GCMT Shop</title>
     <meta name="description" content={product.shortDescription || product.descriptionContent} />
-    <meta property="og:title" content={`${product.name} | NovaCommerce`} />
+    <meta property="og:title" content={`${product.name} | GCMT Shop`} />
     <meta property="og:description" content={product.shortDescription || product.descriptionContent} />
     <meta property="og:image" content={product.images[0]} />
-    <meta property="og:url" content={`https://novacommerce-demo.example/product/${product.id}`} />
-    <link rel="canonical" href={`https://novacommerce-demo.example/product/${product.id}`} />
+    <meta property="og:url" content={`https://gcmtshop.com/product/${product.id}`} />
+    <link rel="canonical" href={`https://gcmtshop.com/product/${product.id}`} />
 
     {/* Product Rich Snippet */}
     <script type="application/ld+json">
@@ -327,21 +328,16 @@ const ProductDetail = () => {
         image: product.images,
         description: product.shortDescription || product.descriptionContent,
         sku: product.sku || product.id,
-        brand: { "@type": "Brand", name: "NovaCommerce" },
+        brand: { "@type": "Brand", name: "GCMT Shop" },
         offers: {
           "@type": "Offer",
-          url: `https://novacommerce-demo.example/product/${product.id}`,
+          url: `https://gcmtshop.com/product/${product.id}`,
           priceCurrency: "INR",
           price: product.discountPrice || product.price,
-          availability: product.stock > 0
+          availability: product.quantityLimit > 0
             ? "https://schema.org/InStock"
             : "https://schema.org/OutOfStock",
           itemCondition: "https://schema.org/NewCondition"
-        },
-        aggregateRating: {
-          "@type": "AggregateRating",
-          ratingValue: product.rating || 4.5,
-          reviewCount: 10
         }
       })}
     </script>
@@ -352,13 +348,13 @@ const ProductDetail = () => {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
         itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Home", item: "https://novacommerce-demo.example" },
-          { "@type": "ListItem", position: 2, name: "Products", item: "https://novacommerce-demo.example/products" },
+          { "@type": "ListItem", position: 1, name: "Home", item: "https://gcmtshop.com" },
+          { "@type": "ListItem", position: 2, name: "Products", item: "https://gcmtshop.com/products" },
           {
             "@type": "ListItem",
             position: 3,
             name: product.name,
-            item: `https://novacommerce-demo.example/product/${product.id}`
+            item: `https://gcmtshop.com/product/${product.id}`
           }
         ]
       })}
@@ -433,7 +429,7 @@ const ProductDetail = () => {
             
             <div className="product-meta">
               <div className="product-rating">
-                {renderStars(product.rating)}
+                {product.rating > 0 && product.rating <= 5 && renderStars(product.rating)}
               </div>
             </div>
             
@@ -486,7 +482,7 @@ const ProductDetail = () => {
                 <button 
                   className="quantity-btn" 
                   onClick={increaseQuantity}
-                  disabled={quantity >= product.stock}
+                  disabled={quantity >= product.quantityLimit}
                 >
                   +
                 </button>
@@ -495,7 +491,7 @@ const ProductDetail = () => {
               <div className="purchase-actions">
                 <AddToCartButton 
                   productId={product.id} 
-                  quantity={quantity} 
+                  quantity={quantity} variant={selectedVariant} disabled={product.quantityLimit < quantity}
                   className="btn-primary" 
                 />
                 

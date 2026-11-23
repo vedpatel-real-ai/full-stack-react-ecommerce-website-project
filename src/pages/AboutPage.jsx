@@ -1,7 +1,7 @@
 import React from 'react';
 import { Mail, Phone, MapPin, Award, Users, Shield } from 'lucide-react';
-import Photo from "../assets/demo-product.svg";
-import arya from "../assets/demo-product.svg";
+import Photo from "../assets/GCMT-logo.webp";
+import arya from "../assets/ARYA PATEL GCMT.jpg";
 import { Helmet } from 'react-helmet-async';
 import "../styles/AboutPage.css";
 
@@ -9,12 +9,12 @@ export default function AboutPage() {
   return (
     <>
 <Helmet>
-  <title>About NovaCommerce | Portfolio Demo Marketplace</title>
-  <meta name="description" content="Learn about NovaCommerce, a fictional self-contained ecommerce portfolio demo." />
-  <meta property="og:title" content="About NovaCommerce" />
-  <meta property="og:description" content="Learn about the NovaCommerce portfolio demo marketplace." />
-  <meta property="og:url" content="https://novacommerce-demo.example/about" />
-  <link rel="canonical" href="https://novacommerce-demo.example/about" />
+  <title>About GCMT Shop | Herbal & Natural Products</title>
+  <meta name="description" content="Learn about GCMT Shop, our mission to provide herbal and natural products in India, including our popular herbal charcoal toothpaste." />
+  <meta property="og:title" content="About GCMT Shop" />
+  <meta property="og:description" content="Learn about GCMT Shop and our mission to provide 100% natural products." />
+  <meta property="og:url" content="https://gcmtshop.com/about" />
+  <link rel="canonical" href="https://gcmtshop.com/about" />
 </Helmet>
     <div className="aboutus-page bg-white min-h-screen">
       {/* Hero Section */}
@@ -155,8 +155,8 @@ Experience the power of Ayurveda. Trusted since 2012.              </p>
           </div>
           <div className="aboutus-contact-grid grid md:grid-cols-3 gap-8">
             {[
-              { Icon: Mail, title: 'Email Us', lines: ['hello@novacommerce-demo.com'] },
-              { Icon: Phone, title: 'Call Us', lines: ['555-010-2040', 'Mon-Fri: 10AM-6PM'] },
+              { Icon: Mail, title: 'Email Us', lines: ['gcmtshop@gmail.com'] },
+              { Icon: Phone, title: 'Call Us', lines: ['+91 7623818818', 'Mon–Fri: 10AM–6PM IST'] },
               { Icon: MapPin, title: 'Visit Us', lines: ['213, Pratik Mall, Kudasan, Gandhinagar, Gujarat, India'] },
             ].map(({ Icon, title, lines }) => (
               <div key={title} className="aboutus-contact-card bg-gray-50 p-8 rounded-lg text-center">
