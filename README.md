@@ -114,6 +114,16 @@ Install Chromium with `npx playwright install chromium` before running the brows
 
 `npm run check` combines the source secret scan, Vitest, native PostgreSQL tests, build and runtime dependency audit. The browser tests use an isolated identity service, synthetic records and a payment simulator. [Verification workflow](.github/workflows/verify.yml) · [Test evidence](docs/engineering-audit.md)
 
+### Reproduce an interrupted checkout
+
+After installing the dependencies and Chromium, run this browser test from the repository root.
+
+```bash
+npm run test:e2e -- --grep "losing the checkout response"
+```
+
+The fixture prepares a payment form, then drops the response before the shopper receives it. After a refresh, the shopper retries checkout. The test checks that the page shows the original order reference with payment still unconfirmed, that the cart still contains the item, and that the browser sends zero gateway requests. [Browser test](tests/e2e/store.spec.js)
+
 ## Common Engineering Questions
 
 ### 1. How do the frontend, backend and database communicate?
