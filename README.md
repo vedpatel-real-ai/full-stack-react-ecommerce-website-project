@@ -114,6 +114,64 @@ Install Chromium with `npx playwright install chromium` before running the brows
 
 `npm run check` combines the source secret scan, Vitest, native PostgreSQL tests, build and runtime dependency audit. The browser tests use an isolated identity service, synthetic records and a payment simulator. [Verification workflow](.github/workflows/verify.yml) · [Test evidence](docs/engineering-audit.md)
 
+## Common Engineering Questions
+
+### 1. How do the frontend, backend and database communicate?
+
+React uses Supabase for sign-in, catalog reads and permitted actions such as editing a cart. For checkout and payment status, React calls the Node.js API on the same site. The API verifies the caller and invokes restricted PostgreSQL functions. The storefront uses the order status saved by the backend, so a failed request can be retried without guessing whether payment succeeded.
+
+### 2. Can customers shop without creating an account?
+
+Yes. Visitors can browse and keep a cart in their browser without registering. When a guest starts checkout, Supabase can create an anonymous identity that owns the order. That identity can be upgraded during account setup. A guest who signs into a different account can carry over the cart, while any earlier orders stay with the identity that placed them.
+
+### 3. How are products, shopping carts and orders stored?
+
+PostgreSQL stores a product's current price, discount, availability and size options. Each saved cart row records the customer, product, selected size and quantity. Orders keep a snapshot of the purchased lines and amounts, along with separate payment and fulfilment statuses. Later catalog edits therefore leave the original purchase intact.
+
+### 4. What happens if a product price or size changes during checkout?
+
+The database compares the cart the customer reviewed with the current products, selected sizes, quantities and prices. A changed line can invalidate the quote even when the total stays the same. If the quote no longer matches, checkout asks the customer to review the cart again before issuing a payment form.
+
+### 5. Why is the final price verified on the server?
+
+The amount displayed in the browser is a quote for the customer. PostgreSQL calculates the amount from stored product prices in paise and saves it with the order. The server uses that amount for the gateway request. When the payment response arrives, a different reported amount cannot settle the order.
+
+### 6. How does GCMT Shop integrate with CCAvenue?
+
+When online checkout is enabled, the server creates an encrypted form using the stored order reference, amount and shipping details. The browser submits it to CCAvenue. The payment endpoint decrypts the response, checks the expected fields and asks PostgreSQL to reconcile it with the stored order. Missing or invalid fields stop reconciliation. The live merchant contract still requires staging verification. [Payment lifecycle](docs/payment-lifecycle.md)
+
+### 7. Does opening the payment success page mean the payment succeeded?
+
+The confirmation page looks up the order using the current session and order reference. It shows payment as successful only when the stored order has a paid status. If the gateway response has yet to be recorded, the order can still show as pending. Another customer's reference cannot retrieve that customer's order.
+
+### 8. What happens if CCAvenue sends the same payment response twice?
+
+PostgreSQL locks the order and compares the incoming result with its recorded receipt. It can record a matching repeat as a duplicate without removing any more items from the cart. The unique tracking reference also prevents one gateway capture from settling two orders. Conflicting evidence can be flagged for review.
+
+### 9. What happens if a customer closes the browser during checkout?
+
+The customer can return with the same identity and check the order status. If the server never released the prepared form, a new checkout action can recheck the cart. Once a form has been released, the server returns the existing order reference while it remains unresolved. That avoids issuing a second payable form when the first may have reached CCAvenue.
+
+### 10. Why are PostgreSQL transactions important for payments?
+
+A successful reconciliation records the receipt, marks the order paid, updates the purchased cart rows and writes a payment event in one transaction. If a write fails, all of those changes roll back together. A valid response can then be retried without leaving the order paid but missing its receipt or applying the cart change twice.
+
+### 11. How are customer records and admin features protected?
+
+Supabase row-level security limits which rows a customer's session can read or change. The staff interface checks the user's stored role, and database policies enforce staff permissions on direct requests. Since the Node.js service client can bypass those policies, API handlers verify the session and explicitly check the order owner or staff role before granting access.
+
+### 12. How does cash on delivery work?
+
+When COD is enabled, checkout verifies the cart and price, then saves a cash-due order and removes the purchased cart items in one transaction. Eligible orders can later be marked collected by an authorized staff member who provides a receipt reference. The database records who collected the cash and keeps that event separate from online gateway receipts.
+
+### 13. How does the website generate and validate PDF invoices?
+
+The browser builds the invoice from the stored order snapshot and escapes order text before rendering it. It checks in paise that each unit price multiplied by its quantity matches the stored line total, then compares their sum with the stored order total. If the values are missing or inconsistent, invoice generation stops for review.
+
+### 14. How was the application tested without charging real money?
+
+The browser tests run the built app against local identities, synthetic orders and a simulated gateway. Vitest covers handlers and database policies, while native PostgreSQL tests exercise concurrent writes, duplicate responses and rollback. The simulator verifies how the application reacts to controlled payment responses. Live CCAvenue processing and hosted database configuration still need staging validation.
+
 ## Current status and limitations
 
 The checked-in checkout flow was verified locally against synthetic services. The commercial storefront used an earlier payment integration when it was inspected on November 23, 2026. The simulator verifies application behavior under controlled responses. Merchant acceptance, hosted schema compatibility and the production cutover still require separate staging validation. [Deployment and recovery](docs/deployment.md)
@@ -133,7 +191,7 @@ docs/                 Technical guides, review evidence and deployment notes
 
 - [Checkout and payment lifecycle](docs/payment-lifecycle.md)
 - [Database and security review](docs/engineering-audit.md)
-- [Technical questions and answers](docs/engineering-questions.md)
+- [Common engineering questions](#common-engineering-questions)
 - [Testing and verification](#testing)
 - [Deployment, staging and recovery](docs/deployment.md)
 
